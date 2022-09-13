@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+set -e
+
+function get_user_signing_keys() {
+	local USER="$1"
+	local TEMPLATE="{{ range . }}{{ printf \"$USER@users.noreply.github.com %s\\n\" .key }}{{ end }}"
+
+	echo "Pulling signing keys for user:  $USER"
+	gh api /users/$USER/ssh_signing_keys --paginate --template="${TEMPLATE}" >> $OUTPUTFILE
+}
+
+APPEND=false
+FORCE=false
+ORGANIZATION=
+OUTPUTFILE=~/.ssh/allowed_signers
+TEAM=
+USER=
+
+__USAGE="
+Generate SSH allowed signers file from GitHub users.
+
+USAGE
+  $(basename $0) [options] <organization>/<team>
+  $(basename $0) [options] <user>
+
+FLAGS
+  -a, --append                        Append signing keys to existing SSH allowed signers file
+  -d, --debug                         Enable debugging
+  -f, --force                         Whether to overwrite output file if it exists
+  -o, --output-file <output-file>     Path to SSH allowed signers file to generate
+";
+
+die() {
+	printf "\nError: %s\n" "$1"
+	echo "$__USAGE"
+	exit 1
+}
+
+if ! type -p gh > /dev/null; then
+	die "'gh' could not be found"
+fi
+
+while getopts "adfho:-:" OPT; do
+	if [ "$OPT" = "-" ]; then    # long option: reformulate OPT and OPTARG
+		OPT="${OPTARG%%=*}"      # extract long option name
+		OPTARG="${OPTARG#$OPT}"	 # extract long option argument (may be empty)
+		OPTARG="${OPTARG#=}"     # if long option argument, remove assigning `=`
+	fi
+
+	case "$OPT" in
+
+		append | a)
+			APPEND=true
+			;;
+
+		debug | d)
+			set -x
+			;;
+
+		force | f)
+			FORCE=true
+			;;
+
+		help | h)
+			echo "$__USAGE"
+			exit 0
+			;;
+
+		output-file | o)
+			OUTPUTFILE="${OPTARG}"
+			;;
+	esac
+done
+
+# shift so that $@, $1, etc. refer to the non-option arguments
+shift "$((OPTIND-1))"
+
+if [ -z "$1" ]; then
+	die "Must provide organization/team or user"
+elif [[ "$1" == *"/"* ]]; then
+	ORGANIZATION=$(echo $1 | cut -d '/' -f 1)
+	TEAM=$(echo $1 | cut -d '/' -f 2)
+else
+	USER="$1"
+fi
+
+# Handle situation if previous SSH allowed signers file exists
+if ! $APPEND && test -e "$OUTPUTFILE"; then
+
+	if ! $FORCE; then
+		die "$OUTPUTFILE exists; -f, --force will delete if exists"
+	fi
+
+	echo "Deleting existing SSH allowed signers file:  $OUTPUTFILE"
+	rm -f $OUTPUTFILE
+fi
+
+if [ -z "${USER}" ]; then
+	QUERY='
+	query ($login: String!, $slug: String!, $endCursor: String) {
+	  organization(login: $login) {
+		team(slug: $slug) {
+		  members(first: 10, after: $endCursor, membership: ALL) {
+			pageInfo {
+			  endCursor
+			  hasNextPage
+			}
+			nodes {
+			  login
+			}
+		  }
+		}
+	  }
+	}'
+
+	echo "Pulling signing keys for team:  $ORGANIZATION/$TEAM"
+
+	for user in $(gh api graphql -f query="${QUERY}" -F login="$ORGANIZATION" -F slug="$TEAM" --paginate --jq '.data.organization.team.members.nodes[].login'); do
+		get_user_signing_keys "${user}"
+	done
+else
+	get_user_signing_keys "${USER}"
+fi
