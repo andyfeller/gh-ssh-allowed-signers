@@ -27,7 +27,7 @@ FLAGS
   -a, --append                        Append signing keys to existing SSH allowed signers file
   -d, --debug                         Enable debugging
   -f, --force                         Whether to overwrite output file if it exists
-  -o, --output-file <output-file>     Path to SSH allowed signers file to generate
+  -o, --output-file <output-file>     Path to SSH allowed signers file to generate; default '$OUTPUTFILE'
 ";
 
 die() {

@@ -10,6 +10,8 @@ A `gh` extension to generate SSH allowed users file from GitHub users' signing k
 
 ## Usage
 
+`gh-ssh-allowed-signers` extension will create and populate `~/.ssh/allowed_signers` file with public signing keys for users individually or all users within a GitHub team.
+
 ```shell
 $ gh ssh-allowed-signers --help
 
@@ -23,7 +25,14 @@ FLAGS
   -a, --append                        Append signing keys to existing SSH allowed signers file
   -d, --debug                         Enable debugging
   -f, --force                         Whether to overwrite output file if it exists
-  -o, --output-file <output-file>     Path to SSH allowed signers file to generate
+  -o, --output-file <output-file>     Path to SSH allowed signers file to generate; default '/Users/andyfeller/.ssh/allowed_signers'
+```
+
+The resulting SSH allowed signers file will contain all of the public signing keys for each user with the principal based on the user's GitHub no reply email address.  For example, here is the result if you executed `gh ssh-allowed-signers andyfeller`:
+
+```shell
+andyfeller@users.noreply.github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILGK6uBGvfjK+DGqiDguxDFUoScNC/hwKQ02clco0nz8
+andyfeller@users.noreply.github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIALqMCzXle3FO/oaOIyxkmutYphiZ8TH+udmH4Mc/a1V
 ```
 
 ## Setup
