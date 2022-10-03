@@ -85,6 +85,8 @@ else
 fi
 
 # Handle situation if previous SSH allowed signers file exists
+echo "Using SSH allowed signers file:  $OUTPUTFILE"
+
 if ! $APPEND && test -e "$OUTPUTFILE"; then
 
 	if ! $FORCE; then
