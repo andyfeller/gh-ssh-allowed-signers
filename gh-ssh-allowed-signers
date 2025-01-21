@@ -6,7 +6,7 @@ function get_user_signing_keys() {
 	local TEMPLATE="{{ range . }}{{ printf \"$USER@users.noreply.github.com %s\\n\" .key }}{{ end }}"
 
 	echo "Pulling signing keys for user:  $USER"
-	gh api users/$USER/ssh_signing_keys --paginate --template="${TEMPLATE}" >> $OUTPUTFILE
+	gh api "users/$USER/ssh_signing_keys" --paginate --template="${TEMPLATE}" >> $OUTPUTFILE
 }
 
 APPEND=false
